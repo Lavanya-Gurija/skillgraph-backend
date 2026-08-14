@@ -12,50 +12,7 @@ public class SeedService {
     public SeedService(Driver driver) {
         this.driver = driver;
     }
-//
-//    public void seedData() {
-//
-//        String cypher = """
-//                MERGE (d:Developer {name: $developerName})
-//
-//                MERGE (java:Skill {name: 'Java'})
-//                MERGE (spring:Skill {name: 'Spring Boot'})
-//                MERGE (microservices:Skill {name: 'Microservices'})
-//                MERGE (rest:Skill {name: 'REST API'})
-//                MERGE (websocket:Skill {name: 'WebSocket'})
-//                MERGE (mysql:Skill {name: 'MySQL'})
-//                MERGE (oop:Skill {name: 'OOP'})
-//                MERGE (git:Skill {name: 'Git'})
-//
-//                MERGE (project:Project {name: 'EV Charging Platform'})
-//
-//                MERGE (d)-[:HAS_SKILL]->(java)
-//                MERGE (d)-[:HAS_SKILL]->(spring)
-//                MERGE (d)-[:HAS_SKILL]->(rest)
-//                MERGE (d)-[:HAS_SKILL]->(websocket)
-//                MERGE (d)-[:HAS_SKILL]->(mysql)
-//                MERGE (d)-[:HAS_SKILL]->(git)
-//
-//                MERGE (java)-[:PREREQUISITE_OF]->(spring)
-//                MERGE (spring)-[:PREREQUISITE_OF]->(microservices)
-//                MERGE (oop)-[:RELATED_TO]->(java)
-//                MERGE (spring)-[:RELATED_TO]->(rest)
-//
-//                MERGE (d)-[:WORKED_ON]->(project)
-//
-//                MERGE (project)-[:USES]->(java)
-//                MERGE (project)-[:USES]->(spring)
-//                MERGE (project)-[:USES]->(websocket)
-//                MERGE (project)-[:USES]->(mysql)
-//                """;
-//
-//        try (Session session = driver.session()) {
-//            session.run(
-//                    cypher,
-//                    java.util.Map.of("developerName", "Developer 1")
-//            );
-//        }
-//    }
+
     public void seedData() {
 
         String cypher = """
