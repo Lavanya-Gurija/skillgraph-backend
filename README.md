@@ -6,6 +6,13 @@ SkillGraph demonstrates how graph-based data modeling and Cypher queries can be 
 
 ---
 
+## Live Demo
+
+* **Frontend:** https://skill-graph-ui.onrender.com/
+* **Backend API:** https://skillgraph-backend-0fsg.onrender.com/
+
+---
+
 ## Use Case
 
 SkillGraph helps users explore a developer's skills, discover prerequisite learning paths, and find related skills based on shared developer knowledge.
@@ -60,11 +67,14 @@ This makes the graph model well suited for exploring connected developer and ski
 ### Database
 
 * CognoDB
-* Graph database model
+* OpenCypher
+* Bolt protocol
 
 ### Frontend
 
 * React.js
+* Vite
+* Axios
 
 ---
 
@@ -72,7 +82,7 @@ This makes the graph model well suited for exploring connected developer and ski
 
 SkillGraph follows a layered backend architecture where the React.js frontend communicates with the Spring Boot backend through REST APIs.
 
-The backend uses the Neo4j Java Driver to communicate with CognoDB and execute Cypher queries.
+The backend uses the official Neo4j Java Driver to communicate with CognoDB and execute Cypher queries.
 
 ```text
 React.js Frontend
@@ -151,19 +161,15 @@ Skill ──RELATED_TO─────────> Skill
 
 ## Seed Data
 
-The application includes a seed API that creates sample developers, skills, projects, and relationships in CognoDB.
+The application includes a seed service that creates sample developers, skills, projects, and relationships in CognoDB.
 
 ### Developers
-
-The seed data contains:
 
 * `Developer 1`
 * `Developer 2`
 * `Developer 3`
 
 ### Skills
-
-The seed data contains:
 
 * `Java`
 * `Spring Boot`
@@ -177,8 +183,6 @@ The seed data contains:
 * `JavaScript`
 
 ### Projects
-
-The seed data contains:
 
 * `EV Charging Platform`
 * `Banking API`
@@ -248,7 +252,7 @@ The backend performs a multi-hop graph traversal to discover the prerequisite ch
 
 ## API Documentation
 
-The backend exposes REST APIs for loading seed data, retrieving developer skills, generating learning paths, and discovering related skills.
+The backend exposes REST APIs for loading seed data, retrieving developer skills, generating learning paths, discovering related skills, checking backend health, and testing CognoDB connectivity.
 
 ### API Summary
 
@@ -258,6 +262,8 @@ The backend exposes REST APIs for loading seed data, retrieving developer skills
 | `GET`  | `/api/skills?developer={developerName}` | Retrieve a developer's skills    |
 | `GET`  | `/api/learning-path?skill={skillName}`  | Find prerequisite learning paths |
 | `GET`  | `/api/related-skills?skill={skillName}` | Find related skills              |
+| `GET`  | `/api/health`                           | Check backend health             |
+| `GET`  | `/api/test`                             | Test CognoDB connectivity        |
 
 ---
 
@@ -474,7 +480,7 @@ If the skill parameter is missing or empty:
 
 ## Cypher Queries
 
-The application uses Cypher to perform graph traversals against CognoDB.
+The application uses parameterized Cypher queries to perform graph traversals against CognoDB.
 
 ### Developer → Skills
 
@@ -497,6 +503,8 @@ RETURN next.name AS skill,
 ORDER BY distance
 ```
 
+This is a multi-hop graph traversal because it can traverse between one and five `PREREQUISITE_OF` relationships.
+
 ### Related Skills
 
 ```cypher
@@ -512,6 +520,10 @@ RETURN related.name AS skill,
        count(DISTINCT developer) AS developers
 ORDER BY developers DESC, skill
 ```
+
+This query demonstrates a relationship pattern that would require multiple joins in a relational model.
+
+All user-provided values are passed as Cypher parameters rather than concatenated directly into query strings.
 
 ---
 
@@ -551,7 +563,7 @@ skillgraph-backend/
 
 #### `CognoDBConfig`
 
-Configures the database connection and creates the Neo4j Java Driver bean used by the application.
+Configures the CognoDB connection and creates the Neo4j Java Driver bean used by the application.
 
 #### `SeedController`
 
@@ -575,23 +587,63 @@ Creates the initial graph data using Cypher `MERGE` statements.
 
 ---
 
-## Configuration
+## CognoDB Setup
 
-The CognoDB connection is configured through `application.properties`.
+SkillGraph uses **CognoDB Cloud** as its managed graph database.
 
-Example:
+### 1. Create a CognoDB Account
 
-```properties
-cognodb.uri=<COGNODB_URI>
-cognodb.username=<COGNODB_USERNAME>
-cognodb.password=<COGNODB_PASSWORD>
+Create an account through the CognoDB Cloud console:
+
+https://console.cognodb.com/signup
+
+### 2. Create a Free Instance
+
+Create a free `c0` instance and select a region.
+
+### 3. Save the Connection Details
+
+CognoDB provides:
+
+* Bolt URI
+* Username
+* Password
+
+The password should be saved securely because it is provided when the database instance is created.
+
+### 4. Configure Environment Variables
+
+Set the following environment variables:
+
+```bash
+COGNODB_URI=<your-cognodb-uri>
+COGNODB_USERNAME=cognodb
+COGNODB_PASSWORD=<your-cognodb-password>
 ```
 
-Replace the placeholder values with the credentials provided for your CognoDB instance.
+The CognoDB URI has the following general format:
 
-**Do not commit real database credentials or secrets to Git.**
+```text
+bolt+s://<instance-id>.databases.cognodb.cloud
+```
 
-For production environments, credentials should be provided through environment variables or another secure configuration mechanism.
+---
+
+## Configuration
+
+The Spring Boot application reads CognoDB connection details from environment variables.
+
+Example `application.properties`:
+
+```properties
+cognodb.uri=${COGNODB_URI}
+cognodb.username=${COGNODB_USERNAME}
+cognodb.password=${COGNODB_PASSWORD}
+```
+
+Real database credentials are never committed to the repository.
+
+For local development, configure the environment variables in the operating system or development environment before starting the backend.
 
 ---
 
@@ -604,7 +656,7 @@ Make sure the following are installed before running the application:
 * Node.js and npm
 * Git
 * CognoDB database instance
-* A configured CognoDB connection
+* Configured CognoDB connection
 
 ---
 
@@ -622,12 +674,14 @@ git clone <repository-url>
 cd skillgraph-backend
 ```
 
-### 3. Configure CognoDB
+### 3. Configure Environment Variables
 
-Update the CognoDB connection properties in:
+Set:
 
-```text
-src/main/resources/application.properties
+```bash
+COGNODB_URI=<your-cognodb-uri>
+COGNODB_USERNAME=cognodb
+COGNODB_PASSWORD=<your-cognodb-password>
 ```
 
 ### 4. Build the Application
@@ -664,7 +718,59 @@ This creates the sample developers, skills, projects, and relationships in Cogno
 
 ---
 
+## Running the Frontend
+
+The project also includes a React.js frontend that consumes the Spring Boot REST APIs.
+
+The frontend provides a user interface for exploring:
+
+* Developer skills
+* Learning paths
+* Related skills
+
+### Install Dependencies
+
+Navigate to the frontend project:
+
+```bash
+cd <frontend-directory>
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+### Start the Development Server
+
+```bash
+npm run dev
+```
+
+The frontend communicates with the Spring Boot backend through REST APIs.
+
+---
+
 ## Testing the APIs
+
+### Health Check
+
+```bash
+curl http://localhost:8080/api/health
+```
+
+### CognoDB Connectivity Test
+
+```bash
+curl http://localhost:8080/api/test
+```
+
+### Load Seed Data
+
+```bash
+curl -X POST http://localhost:8080/api/seed
+```
 
 ### Get Developer Skills
 
@@ -686,44 +792,23 @@ curl "http://localhost:8080/api/related-skills?skill=Java"
 
 ---
 
-## Frontend
+## Error Handling
 
-The project also includes a React.js frontend that consumes the Spring Boot REST APIs.
+The backend includes centralized exception handling for invalid requests and database-related failures.
 
-The frontend provides a user interface for exploring:
+Invalid or missing request parameters are validated and returned with meaningful error messages.
 
-* Developer skills
-* Learning paths
-* Related skills
+If CognoDB is unavailable or a database operation fails, the backend handles the exception and returns a controlled API response instead of exposing raw database exceptions.
 
-### Start the Frontend
-
-Navigate to the frontend project:
-
-```bash
-cd <frontend-directory>
-```
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Start the development server:
-
-```bash
-npm start
-```
-
-The frontend communicates with the backend REST endpoints to retrieve graph-based results.
+This allows the frontend to display an appropriate error state to the user.
 
 ---
 
 ## Testing
 
-The application was tested to verify the main backend functionality, including:
+The application was tested to verify the main backend and frontend functionality, including:
 
+* CognoDB connectivity
 * Seed data loading
 * Developer skill retrieval
 * Learning-path traversal
@@ -731,10 +816,10 @@ The application was tested to verify the main backend functionality, including:
 * Graph relationship queries
 * REST API request validation
 * Frontend-to-backend communication
-* CognoDB connectivity
 * API response validation
+* Error handling for invalid requests
 
-The APIs were tested with valid and invalid request parameters to verify both successful responses and validation behavior.
+The APIs were tested with both valid and invalid request parameters to verify successful responses and validation behavior.
 
 ---
 
@@ -802,7 +887,7 @@ Instead of performing multiple joins, the application can directly describe the 
 
 ### Why the Neo4j Java Driver?
 
-The Neo4j Java Driver provides a straightforward way for the Spring Boot application to establish a connection to the graph database and execute parameterized Cypher queries.
+CognoDB supports the official Neo4j Java Driver through the Bolt protocol. The driver provides a straightforward way for the Spring Boot application to establish a connection to the graph database and execute parameterized Cypher queries.
 
 ### Why `MERGE` for Seed Data?
 
@@ -812,7 +897,7 @@ The seed service uses `MERGE` so that running the seed endpoint multiple times d
 
 Developer names and skill names are passed as Cypher parameters rather than being directly concatenated into query strings.
 
-This keeps the queries cleaner and avoids constructing queries from raw user input.
+This keeps the queries clean and avoids constructing queries from raw user input.
 
 ---
 
@@ -829,8 +914,7 @@ Possible future improvements include:
 * Interactive graph visualization
 * Pagination and filtering
 * More comprehensive automated tests
-* Improved error handling
-* Production deployment and monitoring
+* Production monitoring
 
 ---
 
@@ -846,4 +930,4 @@ By representing developers, skills, projects, and their relationships directly i
 * Shared developer knowledge analysis
 * Project technology exploration
 
-The project combines **Spring Boot, REST APIs, Cypher, the Neo4j Java Driver, CognoDB, and React.js** to demonstrate a practical graph-based application architecture.
+The project combines **Spring Boot, REST APIs, Cypher, the Neo4j Java Driver, CognoDB, React.js, and Vite** to demonstrate a practical graph-based application architecture.
